@@ -1,0 +1,76 @@
+Tools:
+minikube: managing nodes (VMs in this case) (local only)
+kubectl managing containers in a node
+
+Terminologie:
+- Object: een ding wat gebruikt wordt om een kuberenetes cluster op te zetten en wat opgesteld is op basis van een configuratie file.
+          Verschillende objecten zijn bijvoorbeeld pods, services, sets, replica controllers, nodes, etc.
+
+- node: een virtuele machine of los apparaat waarop de containers gaan draaien.
+
+
+Object types:
+- Pod: een object waarin 1 container uitgevoerd worden. Je zou je hele verzameling containers in 1 pod kunnen gooien, maar dat is niet de
+        bedoeling. een pod bevat alleen meerdere containers als deze 2 echt absoluut super belangerijk altijd naast elkaar op dezelfde node gedeployed
+        moeten worden. De meeste containers zijn zo opgezet dat als er 1 weg valt de rest het in princiepe nog moeten doen (maar dan met timeouts of iets dergelijks).
+        Containers die niet zonder elkaar kunnen werken zou je samen in 1 pod kunnen zetten, zoals een database container en een logger container.
+        Let op dat pods het niet mogelijk maken om dezelfde container meerdere keren te draaien. in plaats daarvan kan je Deployment object gebruiken
+        welke meerder pods start. Pods worden meestal gebruikt voor development purposes, aangezien daar vaak aan 1 container genoeg is.
+- Service: een object waarin networking gerelateerde gegevens opgezet worden.
+- Deployment: Een object welke een serie van identieke pods beheerd en er voor zorgt dat er altijd genoeg van zijn en dat ze de juiste config hebben
+              (het live updaten van een pod is maar met een paar instellingen mogelijk)
+
+
+Configuratie waardes:
+- API Version: Bepaald welke object types er beschikbaar zijn. "apps/v1" heeft bijvoorbeeld alleen toegang to ControllerRevision en StatefulSet, waar "v1"
+               events, endpoints, pods, etc. heeft. basically een object type group
+- Type: Wat voor type object deze configuratiefile voor staat.
+- Metadata: een serie van object type onafhankelijke instellingen die helpen bij het vinden van verschillende objecten,
+            zoals een naam voor dit object of de bijbehorende labels. Labels kunnen gebruikt worden door andere objecten om te zien voor welke objecten
+            zij van toepassing zijn. labels zijn key-value pairs, niet alleen strings.
+- spec: bevat object type specifieke instellingen
+
+
+Configuratie waardes voor objecten van het type Pod:
+- COntainer: bevat informatie over de containers die in deze pod draaien. Elke container kan de onderstande waardes bevatten, en begint met een -
+  - name: spreekt voor zich
+  - image: de gebruikte image, indien deze op de docker hub staat
+  - ports: Een lijst van alle poorten die ge-exposed moeten worden in de container. in docker-compose kan je ook aangeven naar welke port op de host,
+           maar dat gaat hier niet, daar is een Service object voor nodig.
+
+Configuratie waardes voor objecten van het type Service:
+- type: welk SUBtype je wilt gebruiken. Er zijn er 4:
+  - ClusterIP:
+  - NodePort: Maakt een container bereikbaar van buitenaf. Normaal gesproken alleen van toepassing voor developement omgevingen aangezien de rest door een loadbalancer gaat
+  - LoadBalancer:
+  - Ingress:
+- selector: Wordt gebruikt om aan te geven voor welke objecten deze service relevant is.
+- ports: bevat een lijst van port mapping regels die toegepast wordt voor elk object wat uit de selector hierboven komt. elke entry begint met een - en heeft de volgende waardes:
+  - port: De externe port waarmee verbinding gemaakt moet worden door andere objects om geredirect te worden naar de objects waar deze service bij hoort.
+          Functioneel nutteloos voor subtype NodePort
+  - targetPort: De interne port van de container. moet in de "ports" configuratie van de target object staan
+  - nodePort: De port die gebruikt moet worden als je RECHTSTREEKS met de target object wilt verbinden. Alleen voor NodePort subtypes. Optioneel, default naar random numer
+
+
+Kubectl command line parameters:
+- apply: Wordt gebruikt om de huidige configuratie van je cluster aan te passen. gebruik -f "filename" om aan te geven welk bestand de nieuwe/gewijzigde configuratie bevat.
+- get: haalt een lijst met informatie op over een bepaald type object. bijvoorbeeld 'get pods' haalt de status van alle pods op.
+- describe: Haal gedetailleerde informatie op van 1 specifiek object. De syntax hiervoor is 'kubectl describe <object kind> <object name>'. De combo name en kind is altijd uniek
+- delete: verwijderd alle objecten die gemaakt zijn met een bepaald configuratie bestand.
+
+Deployment methodes:
+Kubernetes maakt standaard gebruik van "Declatative deployments", waar je declareerd in een configuratiebestand hoe jij wilt dat het uiteindelijke systeem
+er uit gaat zien, en het aan kubernetes overlaat uit te zoeken wat er gedaan moet worden om deze status te bereiken. Dit is het tegenovergestelde van "Imperative deployments".
+Stel dat je bijvoorbeeld wilt dat er 3 containers draaien van een bepaalde image. De imperative way zou dan zijn
+- kijk hoeveel containers al draaien
+- bepaal wat je moet doen om je doel te bereiken (bijvoorbeeld 1 container verwijderen)
+- het commando uitvoeren wat hiervoor nodig is (docker up bijvoorbeeld, buiten kubernetes om).
+Met declarative deployments ziet dit proces er als volgt uit
+- pas aantal containers aan in de configuratie file van de pod
+- pas de nieuwe configuratie toe (kubectl apply -f....)
+Kubectl zal dan zelf de stappen uit de declerative deployments stap uitvoeren.
+
+Nu is het toevoegen van een container simpel, maar wat als je bijvoorbeeld 20 containers hebt en je wilt dat containers met image X geupdate zijn naar
+versie 2.1 of iets dergelijks? handmatig zou je dan al je containers af moeten gaan, 1 voor 1 de dockerfile/docker-compose die ze gebruiken af gaan, down
+halen, updaten en weer opstarten. Met declaratvie deployments maak je 1 aanpassing in je config file en zeg je tegen kubernetes "zoek maar uit hoe je het doet".
+Declarative is over het algemeen het beste voor deploymentsystemen, hoewel imperative soms handig kan zijn om bijvoorbeeld een probleem te debuggen.

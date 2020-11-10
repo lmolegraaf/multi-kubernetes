@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+    name: client-pod # The combination of name and kind must always be unique and never change, since kubernetes will think this is a new object when you change it, and run that alongside the old, unchanged, pod.
+    labels:
+      component: web
+spec:
+  containers:
+    - name: client
+      image: stephengrider/multi-worker
+      ports:
+        - containerPort: 3000
